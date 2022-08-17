@@ -18,7 +18,7 @@ SEQUENCING_METADATA="${PARENT_DIR}"/test.csv
 ################################################################################
 # This script will generate a directory (folder) containing the output of the script.
 # Where do you want this new folder to go?
-OUTPUT_DIRECTORY=/home/mk1b/Documents/test_demult #"${PARENT_DIR%/*}"
+OUTPUT_DIRECTORY=/mnt/c/Users/RG.5015511/Documents/Projects/demultiplexer_nanopore/test_demult #"${PARENT_DIR%/*}"
 
 
 ################################################################################
