@@ -222,7 +222,10 @@ echo "Metadata has" "${METADATA_DIM[0]}" "rows and" "${METADATA_DIM[1]}" "column
 
 cat "${OUTPUT_DIR}"/barcodes_P5.fasta
 
-
+	awk -F',' -v COLNAME=$COLNUM_ID1 -v COLSEQ=$COLNUM_ID1_SEQ \
+	  'NR>1 { print $COLNAME, $COLSEQ }' $SEQUENCING_METADATA |sort | uniq |\
+		awk '{printf ">%s\n^%s\n", $1, $2}' >> "${OUTPUT_DIR}"/barcodes_P5_anchored.fasta
+		
 
 ################################################################################
 # Read in primers
@@ -316,10 +319,20 @@ awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
 
   wc -l "${READ1}".new.fastq
 
+  echo "Adding an anchor cutadapt so we are all on the same spot"
+  
+  cutadapt -g AATGATACGGCGACCACCGAGATCTACAC -o "${READ1}".anchored.fastq \
+  --quiet --discard-untrimmed -e 0.2 "${READ1}".new.fastq
 
+  echo "Number of lines after anchoring"
 
-	cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
-	 --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".new.fastq
+  wc -l "${READ1}".anchored.fastq
+  
+  cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5_anchored.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
+   --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".anchored.fastq
+  
+	# cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
+	#  --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".new.fastq
 
 
 

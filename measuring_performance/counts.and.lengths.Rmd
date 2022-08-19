@@ -1,0 +1,93 @@
+---
+title: "counts2"
+author: "Ramon Gallego"
+date: "`r Sys.Date()`"
+output: html_document
+params: 
+  folder:
+    value: C:\Users\RG.5015511\Documents\Projects\demultiplexer_nanopore\test_demult\demultiplexed_20220818_1229
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## A quick performance test of performance
+
+```{r}
+Sys.setenv(MY_PARAM = 'param value')
+```
+
+
+For each library, how many reads per sample, and how many with the primers. Do they have the expected length
+
+## Running Code
+
+
+
+```{r, message=F}
+
+library(tidyverse)
+metadata <- read_csv(file.path(params$folder, "metadata.csv"))
+
+Summary <- read_csv(file.path(params$folder, "summary.csv"))
+
+lengths.by.plate <- read_table(file.path(params$folder, "seq.lengths.demult.by.plate.txt"), col_names = c("seq", "length","file"))
+
+lengths.by.well <- read_table(file.path(params$folder, "seq.lengths.demult.by.well.txt"), col_names = c("seq", "length","file"))
+
+lengths.no.primer <- read_table(file.path(params$folder, "seq.lengths.demult.primer.removed.txt"), col_names = c("seq", "length","file"))
+```
+
+## Getting the lenghts at each steps
+
+
+
+
+```{r}
+lengths.by.plate %>% 
+  filter (length<2000 ) %>% 
+  ggplot(aes(x = length))+
+  geom_density() -> p
+
+lengths.by.plate %>% 
+  filter (length<2000 & length > 1000) %>% 
+  pull (seq) -> possibles
+
+
+lengths.by.well %>% 
+  mutate(possible = case_when(seq %in% possibles ~ "Yes",
+                              TRUE               ~ "No")) %>% 
+  
+  filter (length<2000) %>% 
+  ggplot(aes(x = length))+
+  geom_density(aes(fill = possible) ,alpha = 0.5) -> q
+
+lengths.no.primer%>% 
+  filter (length<2000) %>% 
+  ggplot(aes(x = length))+
+  geom_density() -> r
+
+library(patchwork)
+
+p +q +r
+```
+```{r}
+Summary %>% 
+  mutate(locus = basename(locus)) %>% 
+  pivot_longer(3:5, names_to = "Step", values_to = "seqs") %>% 
+  mutate(seqs = seqs/4,
+         Step = fct_relevel(Step, "plated", "demultiplexed")) %>% 
+  ggplot (aes(x = Step, y = seqs))+
+  geom_line(aes(color = locus, group = locus)) +
+  facet_wrap(~ Sample, scales = "free_y", ncol = 1) +
+  guides(color= "none")
+```
+
+```{r}
+Summary %>% 
+  mutate(locus = basename(locus)) %>% 
+  kableExtra::kable() %>% 
+  kableExtra::kable_styling()
+```
+
