@@ -86,8 +86,8 @@ Summary %>%
 
 ```{r}
 Summary %>% 
-  mutate(locus = basename(locus)) %>% 
-  kableExtra::kable() %>% 
-  kableExtra::kable_styling()
+  mutate(locus = basename(locus)) #%>%
+  # kableExtra::kable() %>% 
+  # kableExtra::kable_styling()
 ```
 

@@ -176,7 +176,7 @@ mv "${OUTPUT_DIR}"/metadata.new.new.csv "${SEQUENCING_METADATA}"
 rm "${OUTPUT_DIR}"/metadata.new.csv
 
 
-##LOCATE the COLUMN OF the RCs 
+##LOCATE the COLUMN OF the RCs
 COLNUM_PRIMER2_RC=$( get_colnum "RC_PCR_REV" "${SEQUENCING_METADATA}")
 COLNUM_ID2_RCSEQ=$( get_colnum "RC_i7" "${SEQUENCING_METADATA}")
 ## Update metadata DIM
@@ -225,7 +225,7 @@ cat "${OUTPUT_DIR}"/barcodes_P5.fasta
 	awk -F',' -v COLNAME=$COLNUM_ID1 -v COLSEQ=$COLNUM_ID1_SEQ \
 	  'NR>1 { print $COLNAME, $COLSEQ }' $SEQUENCING_METADATA |sort | uniq |\
 		awk '{printf ">%s\n^%s\n", $1, $2}' >> "${OUTPUT_DIR}"/barcodes_P5_anchored.fasta
-		
+
 
 ################################################################################
 # Read in primers
@@ -309,7 +309,7 @@ awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
 	# Look for the fwd primer and if found on rc, reverse the output
 
 
-	cutadapt -g file:"${OUTPUT_DIR}"/direction.fasta -o "${READ1}".new.fastq --quiet --action=none --rc -e 0.3 "${READ1}"
+	cutadapt -g file:"${OUTPUT_DIR}"/direction.fasta -o "${READ1}".new.fastq --quiet --action=none --rc -e 0.3 "${READ1}" --discard-untrimmed
 
   echo "Number of lines to begin with"
 
@@ -319,18 +319,22 @@ awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
 
   wc -l "${READ1}".new.fastq
 
+	echo "Number of sequences reversed"
+
+	grep rc "${READ1}".new.fastq | wc -l
+
   echo "Adding an anchor cutadapt so we are all on the same spot"
-  
+
   cutadapt -g AATGATACGGCGACCACCGAGATCTACAC -o "${READ1}".anchored.fastq \
-  --quiet --discard-untrimmed -e 0.2 "${READ1}".new.fastq
+  --quiet --discard-untrimmed -e 0.3 "${READ1}".new.fastq
 
   echo "Number of lines after anchoring"
 
   wc -l "${READ1}".anchored.fastq
-  
+
   cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5_anchored.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
    --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".anchored.fastq
-  
+
 	# cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
 	#  --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".new.fastq
 
@@ -370,7 +374,7 @@ awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
 
 
 ## How does it work if we rc the files prior to finding the p7
-## TODO: CAAGCAGAAGACGGCATACGAGAT can works as a way of anchoring the p7 
+## TODO: CAAGCAGAAGACGGCATACGAGAT can works as a way of anchoring the p7
 
 cutadapt -a ATCTCGTATGCCGTCTTCTGCTTG \
          -o  "${file}".short.fastq \
@@ -381,9 +385,9 @@ cutadapt -a ATCTCGTATGCCGTCTTCTGCTTG \
 	 	cutadapt -a file:"${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.strict.fasta --untrimmed-output "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_nop7.fastq \
 	 -o "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/"${BASE_OUTPUT}"_{name}.fastq \
 	 "${file}".short.fastq  --quiet -e 0.2 >> "${LOGFILE}"
-	 
-	 
-	 
+
+
+
 
 ### NOW FIND HOW MANY PRIMERS PER Plate-Well combo
 
@@ -398,11 +402,11 @@ cutadapt -a ATCTCGTATGCCGTCTTCTGCTTG \
    awk -F ',' -v ID1="${COLNUM_ID1}" -v ID2="${COLNUM_ID2_WELL}" \
    -v VALUE1="${BASE_OUTPUT}" -v VALUE2="${BASE_P7}" \
    -v SEQF=$COLNUM_PRIMER1 -v SEQR=$COLNUM_PRIMER2_RC -v LOCI=$COLNUM_LOCUS \
-   'NR>1 { if ($ID1 == VALUE1 && $ID2 == VALUE2) {printf ">Locus_%s\n%s...%s\n", $LOCI, $SEQF, $SEQR} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/pcr.fasta
+   'NR>1 { if ($ID1 == VALUE1 && $ID2 == VALUE2) {printf ">Locus_%s\n%s...%s\n", $LOCI, $SEQF, $SEQR} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/pcr.fasta
 
 #### And the final cutadapt
 
-	 	cutadapt -g file:"${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/pcr.fasta --untrimmed-output "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_nopcr.fastq \
+	 	cutadapt -g file:"${FINAL_DIR}"/pcr.fasta --untrimmed-output "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_nopcr.fastq \
 	 -o "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/"${BASE_OUTPUT}"_Well_"${BASE_P7}"_{name}.fastq \
 	 "${file2}"  --quiet -e 0.2 >> "${LOGFILE}"
 
@@ -420,20 +424,7 @@ cd "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"
 
 
 
-decona -l "${MIN_LENGTH}" -m "${MAX_LENGTH}" -q 10 -c "${CLUSTER_SIM}" -n 10 -M
-
-cd "${Current_dir}"
-
 done # End of loop across all plates within a file
 
 
 	done # End of loop across all initial fastq files
-
-
-
-# if [[ "${SEARCH_ASVs}" = "YES" ]]; then
-	echo "launching  gather decona"
-# 	conda activate decona
-#
-	Rscript --vanilla "${SCRIPT_DIR}"/r/gather.decona.r "${OUTPUT_DIR}"
-# fi
