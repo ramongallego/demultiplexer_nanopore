@@ -429,11 +429,11 @@ n_files2=("${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_*_round2_rc.fastq)
    -v SEQF="${COLNUM_PRIMER1}" -v SEQR="${COLNUM_PRIMER2_RC}" -v LOCI="${COLNUM_LOCUS}" \
    'NR>1 { if ($ID1 == VALUE1 && $ID2 == VALUE2) {printf ">Locus_%s\n%s...%s\n", $LOCI, $SEQF, $SEQR} }'  "${SEQUENCING_METADATA}" > "${BARCODES_DIR}"/pcr.fasta
 
-#### And the final cutadapt
+#### And the final cutadapt. NEW PROBLEM - the FWD..REV approach often trims at first similar sequence
 
 	 	cutadapt -g file:"${BARCODES_DIR}"/pcr.fasta --untrimmed-output "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_nopcr.fastq \
 	 -o "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_Well_"${BASE_P7}"_{name}.fastq \
-	 "${newp7name}"  --quiet -e 0.3 --cores="${N_CORES}">> "${LOGFILE}"
+	 "${newp7name}"  --quiet -e 0.2 --cores="${N_CORES}">> "${LOGFILE}"
 
 	nseq_deplated=$(cat ${file} | wc -l)
 
