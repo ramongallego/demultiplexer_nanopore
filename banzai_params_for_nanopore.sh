@@ -37,20 +37,15 @@ COLNAME_SAMPLE_ID="sample_id"
 COLNAME_ID1_NAME="plate_name.p5"
 COLNAME_ID1_SEQ="barcode.p5"
 
-#COLNAME_INSERT_SIZE="insert_size"
-
-
-
-
+#################################################################################
+# MULTI:CORE
 ################################################################################
-# QUALITY FILTERING
-################################################################################
-# Substantial quality filtering (e.g. trimming, minimum length, etc) is performed by PEAR during read merging.
-# You may also want to exclude sequences containing more than a specified threshold of 'expected errors'
-# This number is equal to the sum of the error probabilities.
-# For more information on this parameter, Google the usearch help
-Perform_Expected_Error_Filter="YES" # [YES|NO]
-Max_Expected_Errors="0.5"
+
+# In a Linux system works much faster if you run cutadapt with multicore support
+# Type here the number of cores you want to dedicate to the task
+
+
+N_CORES=8
 
 
 ################################################################################
@@ -113,6 +108,3 @@ CLUSTER_SIM="0.8"
 # Would you like to save every single intermediate file as we go? YES | NO
 # recommendation: NO, unless testing or troubleshooting
 HOARD="YES"
-
-# Would you like to compress extraneous intermediate files once the analysis is finished? YES/NO
-PERFORM_CLEANUP="YES"
