@@ -1,0 +1,54 @@
+---
+title: "Reverse primer too quickly"
+output: html_notebook
+---
+
+### Cutadapt
+
+Cutadapt offers an option to trim Fwd and Rev primers at once, with the syntax FWD...REV
+
+The problem is that it often results in trimming the amplicon too short. This is painfully true with rRNA, because homologue regions do appear
+
+This is how they look now
+
+```{r, echo = F, message=F}
+library (tidyverse)
+```
+
+I used `awk` to print to a file all sequences lengths
+
+```{r, eval=F}
+awk 'NR %4==2 {print length}' <path/with/wildcards/to/demult/files> > seq.lengths.demult.txt
+
+awk 'NR %4==2 {print length}' <path/with/wildcards/to/noprimers/files> > seq.lengths.noprimers.txt
+
+```
+
+
+
+```{r current situation}
+old.output <- "~/Documents/test_demult/demultiplexed_20220823_1422/"
+
+read_table(file.path(old.output, "seq.lengths.demult.txt"), col_names = "len") %>%
+  mutate(Step = "demult") %>% 
+  bind_rows(read_table(file.path(old.output, "seq.lengths.noprimers.txt"), col_names = "len") %>%
+  mutate(Step = "noprimers")) %>% 
+  ggplot()+
+  geom_density(aes(len, after_stat(count), fill = Step)) 
+```
+
+So the current set up cuts short in two ways
+
+## First attempt: Increase the stringency of the last `cutadapt`. Start with 0.2 and 0.1
+
+
+```{r stringency at 0.2 and 0.1}
+output.0.2 <- "~/Documents/test_demult/demultiplexed_20220823_1453/"
+
+read_table(file.path(output.0.2, "seq.lengths.demult.txt"), col_names = "len") %>%
+  mutate(Step = "demult") %>% 
+  bind_rows(read_table(file.path(output.0.2, "seq.lengths.noprimers.txt"), col_names = "len") %>%
+  mutate(Step = "noprimers")) %>% 
+  ggplot()+
+  geom_density(aes(len, after_stat(count), fill = Step)) 
+```
