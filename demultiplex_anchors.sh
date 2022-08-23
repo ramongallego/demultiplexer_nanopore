@@ -91,6 +91,10 @@ mkdir "${FINAL_DIR}"
 
 DEMULT_DIR="${OUTPUT_DIR}"/demultiplexed
 mkdir "${DEMULT_DIR}"
+
+BARCODES_DIR="${OUTPUT_DIR}"/barcodes
+mkdir "${BARCODES_DIR}"
+
 ################################################################################
 # READ METADATA
 ################################################################################
@@ -160,7 +164,7 @@ while read line ; do revcom $line ; done |\
 sed '1s/^/RC_i7\n/'  > "${OUTPUT_DIR}"/rci7.txt
 
 paste "${SEQUENCING_METADATA}" "${OUTPUT_DIR}"/rci7.txt -d ',' > "${OUTPUT_DIR}"/metadata.new.csv
-
+ rm "${OUTPUT_DIR}"/rci7.txt
    ## First rc the PCR PRIMER, then join it to the metadata
 
 
@@ -170,6 +174,8 @@ while read line ; do revcom $line ; done |\
 sed '1s/^/RC_PCR_REV\n/'  > "${OUTPUT_DIR}"/rc_pcr.txt
 
 paste "${OUTPUT_DIR}"/metadata.new.csv "${OUTPUT_DIR}"/rc_pcr.txt -d ',' > "${OUTPUT_DIR}"/metadata.new.new.csv
+
+rm "${OUTPUT_DIR}"/rc_pcr.txt
 
 mv "${OUTPUT_DIR}"/metadata.new.new.csv "${SEQUENCING_METADATA}"
 
@@ -218,13 +224,13 @@ echo "Metadata has" "${METADATA_DIM[0]}" "rows and" "${METADATA_DIM[1]}" "column
 
 	awk -F',' -v COLNAME=$COLNUM_ID1 -v COLSEQ=$COLNUM_ID1_SEQ \
 	  'NR>1 { print $COLNAME, $COLSEQ }' $SEQUENCING_METADATA |sort | uniq |\
-		awk '{printf ">%s\n%s\n", $1, $2}' >> "${OUTPUT_DIR}"/barcodes_P5.fasta
+		awk '{printf ">%s\n%s\n", $1, $2}' >> "${BARCODES_DIR}"/barcodes_P5.fasta
 
 cat "${OUTPUT_DIR}"/barcodes_P5.fasta
 
 	awk -F',' -v COLNAME=$COLNUM_ID1 -v COLSEQ=$COLNUM_ID1_SEQ \
 	  'NR>1 { print $COLNAME, $COLSEQ }' $SEQUENCING_METADATA |sort | uniq |\
-		awk '{printf ">%s\n^%s\n", $1, $2}' >> "${OUTPUT_DIR}"/barcodes_P5_anchored.fasta
+		awk '{printf ">%s\n^%s\n", $1, $2}' >> "${BARCODES_DIR}"/barcodes_P5_anchored.fasta
 
 
 ################################################################################
@@ -264,7 +270,7 @@ cat "${OUTPUT_DIR}"/barcodes_P5.fasta
 
 awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
 	  ' NR > 1 { print $LOCI , $FWD }' $SEQUENCING_METADATA | sort | uniq  |\
-	  awk '{printf ">%s\n%s\n", $1, $2}' >> "${OUTPUT_DIR}"/direction.fasta
+	  awk '{printf ">%s\n%s\n", $1, $2}' >> "${BARCODES_DIR}"/direction.fasta
 
 
 #######
@@ -289,7 +295,7 @@ awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
 ################################################################################
 
 	for (( i=0; i < "${#FILE1[@]}"; i++ )); do
-	  # Identify the forward and reverse fastq files.
+	  # Identify the fastq files. It is usually one, but just in case
 
 	  READ1="${PARENT_DIR}/${FILE1[i]}"
 
@@ -306,34 +312,34 @@ awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
 	##First cutdapt:
 
 
-	# Look for the fwd primer and if found on rc, reverse the output
+	# Look for the fwd primer and if found on rc, reverse the output. New version: Do it
+	# by using the anchor sequence
 
+	echo ""
+	echo "Using cutadapt to select by sequence length, reorient sequences and trim them to the anchor"
+	echo "this might take a while"
+	# Did it using a pipe cutadapt as it is a notch quicker to filter first and find and reverse later
+	cutadapt -m "${MIN_LENGTH}" -M "${MAX_LENGTH}" "${READ1}" | cutadapt -g AATGATACGGCGACCACCGAGATCTACAC -o "${READ1}".anchored.fastq \
+	--quiet --discard-untrimmed -e 0.3 - --rc --cores="${N_CORES}"
 
-	cutadapt -g file:"${OUTPUT_DIR}"/direction.fasta -o "${READ1}".new.fastq --quiet --action=none --rc -e 0.3 "${READ1}" --discard-untrimmed
+  echo "Number of sequences to begin with"
 
-  echo "Number of lines to begin with"
+  awk 'NR % 4 == 2' "${READ1}" | wc -l
 
-  wc -l "${READ1}"
+  echo "Number of sequences after size selection and anchoring"
 
-  echo "Number of lines after"
-
-  wc -l "${READ1}".new.fastq
+  awk 'NR % 4 == 2' "${READ1}".anchored.fastq | wc -l
 
 	echo "Number of sequences reversed"
 
-	grep rc "${READ1}".new.fastq | wc -l
+	grep rc "${READ1}".anchored.fastq | wc -l
 
-  echo "Adding an anchor cutadapt so we are all on the same spot"
+  echo ""
 
-  cutadapt -g AATGATACGGCGACCACCGAGATCTACAC -o "${READ1}".anchored.fastq \
-  --quiet --discard-untrimmed -e 0.3 "${READ1}".new.fastq
 
-  echo "Number of lines after anchoring"
 
-  wc -l "${READ1}".anchored.fastq
-
-  cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5_anchored.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
-   --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".anchored.fastq
+    cutadapt -g file:"${BARCODES_DIR}"/barcodes_P5_anchored.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
+   --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.3 "${READ1}".anchored.fastq --cores="${N_CORES}"
 
 	# cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
 	#  --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".new.fastq
@@ -345,82 +351,103 @@ awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
 
 
 
+
+
 	 ls "${DEMULT_DIR}"/"${FILE1[i]}"/
 
 	 for file in "${n_files[@]}"; do
 
 		 echo "working on file " "${file}"
-		 echo ""
+
 
 
 	 BASE_OUTPUT=$(basename "${file}" |  sed 's/_round1.fastq//g')
 
 	 echo "${BASE_OUTPUT}"
 
-	 mkdir "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"
-	 mkdir "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"
+
 	 ## subset in awk
 
 
-
-
 awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
--v COLSEQ2="${COLNUM_ID2_RCSEQ}" -v COLID2="${COLNUM_ID2_WELL}" \
-'NR>1 { if ($COLNAME == VALUE) {printf ">Well_%s\n%s\n", $COLID2, $COLSEQ2} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.fasta
+	 -v COLSEQ2="${COLNUM_ID2_SEQ}" -v COLID2="${COLNUM_ID2_WELL}" \
+	 'NR>1 { if ($COLNAME == VALUE) {printf ">Well_%s\n^%s\n", $COLID2, $COLSEQ2} }'  "${SEQUENCING_METADATA}" > "${BARCODES_DIR}"/barcodes.p7.for.rc.fasta
 
-awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
--v COLSEQ2="${COLNUM_ID2_RCSEQ}" -v COLID2="${COLNUM_ID2_WELL}" \
-'NR>1 { if ($COLNAME == VALUE) {printf ">Well_%s\n%s$\n", $COLID2, $COLSEQ2} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.strict.fasta
+
+#awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
+#-v COLSEQ2="${COLNUM_ID2_RCSEQ}" -v COLID2="${COLNUM_ID2_WELL}" \
+#'NR>1 { if ($COLNAME == VALUE) {printf ">Well_%s\n%s\n", $COLID2, $COLSEQ2} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.fasta
+
+#awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
+#-v COLSEQ2="${COLNUM_ID2_RCSEQ}" -v COLID2="${COLNUM_ID2_WELL}" \
+#'NR>1 { if ($COLNAME == VALUE) {printf ">Well_%s\n%s$\n", $COLID2, $COLSEQ2} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.strict.fasta
 
 
 ## How does it work if we rc the files prior to finding the p7
 ## TODO: CAAGCAGAAGACGGCATACGAGAT can works as a way of anchoring the p7
+	seqkit seq -r -p -t DNA "${file}" -o "${file}".rc.fastq --quiet
 
-cutadapt -a ATCTCGTATGCCGTCTTCTGCTTG \
-         -o  "${file}".short.fastq \
-	 "${file}"  --quiet -e 0.2 >> "${LOGFILE}"
+	cutadapt -g CAAGCAGAAGACGGCATACGAGAT \
+         -o  "${file}".anchored.rc.fastq \
+         "${file}".rc.fastq  --discard-untrimmed  -e 0.4 --cores="${N_CORES}" >> "${LOGFILE}"
+				 # Change adaptor anchoring -e value
 
+	cutadapt -g file:"${BARCODES_DIR}"/barcodes.p7.for.rc.fasta \
+				 -o "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_{name}_round2_rc.fastq --no-indels \
+				 --quiet --untrimmed-output "${BASE_OUTPUT}"_nop7.fastq -e 0.3 "${file}".anchored.rc.fastq --cores="${N_CORES}" >> "${LOGFILE}"
 
-
-	 	cutadapt -a file:"${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.strict.fasta --untrimmed-output "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_nop7.fastq \
-	 -o "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/"${BASE_OUTPUT}"_{name}.fastq \
-	 "${file}".short.fastq  --quiet -e 0.2 >> "${LOGFILE}"
+#	 	cutadapt -a file:"${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.strict.fasta --untrimmed-output "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_nop7.fastq \
+#	 -o "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/"${BASE_OUTPUT}"_{name}.fastq \
+#	 "${file}".short.fastq  --quiet -e 0.2 >> "${LOGFILE}"
 
 
 
 
 ### NOW FIND HOW MANY PRIMERS PER Plate-Well combo
 
+n_files2=("${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_*_round2_rc.fastq)
+
+	for file2 in "${n_files2[@]}"; do
+
+	#	echo "${file2}"
+
+		newp7name=$(echo "${file2}" | sed 's/_round2_rc.fastq$/.fastq/g')
+		pcr_basename=$(basename "${newp7name}")
+
+	#	echo "${newp7name}"
+
+		seqkit seq -r -p -t DNA "${file2}" -o "${newp7name}" --quiet
+
+	  BASE_P7=$(echo "${pcr_basename}" |  sed 's/.fastq//g' | sed 's/.*Well_//g' )
+
+   echo -ne "In plate ${BASE_OUTPUT} and Well  ${BASE_P7}"'\r'
 
 
-	for file2 in "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/*.fastq; do
 
-   BASE_P7=$(echo "${file2}" |  sed 's/.fastq//g' | sed 's/.*Well_//g' )
-
-   echo "In plate ${BASE_OUTPUT} and Well  ${BASE_P7}"
-
-   awk -F ',' -v ID1="${COLNUM_ID1}" -v ID2="${COLNUM_ID2_WELL}" \
+   awk -F',' -v ID1="${COLNUM_ID1}" -v ID2="${COLNUM_ID2_WELL}" \
    -v VALUE1="${BASE_OUTPUT}" -v VALUE2="${BASE_P7}" \
-   -v SEQF=$COLNUM_PRIMER1 -v SEQR=$COLNUM_PRIMER2_RC -v LOCI=$COLNUM_LOCUS \
-   'NR>1 { if ($ID1 == VALUE1 && $ID2 == VALUE2) {printf ">Locus_%s\n%s...%s\n", $LOCI, $SEQF, $SEQR} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/pcr.fasta
+   -v SEQF="${COLNUM_PRIMER1}" -v SEQR="${COLNUM_PRIMER2_RC}" -v LOCI="${COLNUM_LOCUS}" \
+   'NR>1 { if ($ID1 == VALUE1 && $ID2 == VALUE2) {printf ">Locus_%s\n%s...%s\n", $LOCI, $SEQF, $SEQR} }'  "${SEQUENCING_METADATA}" > "${BARCODES_DIR}"/pcr.fasta
 
 #### And the final cutadapt
 
-	 	cutadapt -g file:"${FINAL_DIR}"/pcr.fasta --untrimmed-output "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_nopcr.fastq \
-	 -o "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/"${BASE_OUTPUT}"_Well_"${BASE_P7}"_{name}.fastq \
-	 "${file2}"  --quiet -e 0.2 >> "${LOGFILE}"
+	 	cutadapt -g file:"${BARCODES_DIR}"/pcr.fasta --untrimmed-output "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_nopcr.fastq \
+	 -o "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_Well_"${BASE_P7}"_{name}.fastq \
+	 "${newp7name}"  --quiet -e 0.3 --cores="${N_CORES}">> "${LOGFILE}"
 
 	nseq_deplated=$(cat ${file} | wc -l)
+
 	nseq_demult=$(cat ${file2} | wc -l)
-	nseq_noprimer=$(cat "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/"${BASE_OUTPUT}"_Well_"${BASE_P7}"_*.fastq | wc -l )
+
+	nseq_noprimer=$(cat "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_Well_"${BASE_P7}"_*.fastq | wc -l )
 
 	 printf "%s,%s,%s,%s,%s\n" \
-	 "${BASE_OUTPUT}" "${file2}" \
+	 "${BASE_OUTPUT}" "${pcr_basename}" \
 	 "${nseq_deplated}" "${nseq_demult}" "${nseq_noprimer}" >> "${OUTPUT_SUMMARY}"
 
 	done # End of loop across all wells within a plate
 
-cd "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"
+#cd "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"
 
 
 
@@ -428,3 +455,9 @@ done # End of loop across all plates within a file
 
 
 	done # End of loop across all initial fastq files
+
+
+if [[ "${HOARD}" != "YES" ]]; then
+	rm "${OUTPUT_DIR}"/*nop5.fastq
+	rm -rd "${DEMULT_DIR}"
+fi
