@@ -1,0 +1,36 @@
+---
+title: "Plotting Decona results"
+author: "Ramon Gallego"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+library(tidyverse)
+ASV_table <- read_csv("~/Documents/test_demult/decona_all_together/ASV_table.csv")
+
+```
+
+```{r}
+#| echo: false
+ASV_table %>% 
+  separate(file, into= c("Plate", "Rest"), sep = "_Well_") %>% 
+  separate(Rest, into =c("Well", "Locus"), sep = "_Locus_") %>% 
+  mutate(Locus = str_remove(Locus, ".fastq")) %>% 
+  separate(Well, into = c("Row", "Column"), sep = 1, convert = T) %>% 
+  mutate(Column = fct_reorder(as.character(Column), Column)) %>% 
+  ggplot(aes(x = Column, y = Row)) +
+  facet_wrap(~Plate, ncol = 2) +
+  geom_tile(aes(fill = nReads)) +
+  scale_fill_gradient(name = "count", trans = "log")
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).

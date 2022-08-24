@@ -1,0 +1,62 @@
+---
+title: "Running Dada2 on nanopore"
+format: html
+editor: visual
+params: 
+  demult_output_folder:
+    value: ~/Documents/test_demult/demultiplexed_20220823_1559/
+  dada2_output_folder: 
+    value: ~/Documents/test_demult/dada2test
+---
+
+## DADA2
+The demultiplexer for nanopore is fairly quick. Now let's create a script to quickly run dada2 on those files and parse the results.
+
+## Input
+
+The input for this script is the output folder of the demultiplex_anchors.sh script. It needs a 'metadata' file (so we can map ASVs back to samples) and a folder with all the fastqs (it would be /noprimers from the output folder but that can be changed). 
+
+TODO: change the way of input
+
+## Workflow
+
+I believe dada2 are vectorized so we can run it all at once
+
+
+
+```{r}
+#| message: false
+library (tidyverse)
+library (dada2)
+```
+
+Find all the fastqs
+
+```{r}
+#| echo: false
+rawfastq <- list.files(path = file.path(params$demult_output_folder, "noprimers"),pattern = "*.fastq", recursive = T, full.names = T)
+
+basenames <- basename(rawfastq)
+
+
+dir.create(file.path(params$dada2_output_folder, "filtered"))
+
+filt.fastq <-file.path(params$dada2_output_folder, "filtered", basenames)
+
+filterAndTrim(rawfastq, filt.fastq, truncQ = 1,minLen = 900)
+
+passing.filters <- list.files(file.path(params$dada2_output_folder, "filtered"), full.names = T)
+
+
+
+errors.nano <- dada2::learnErrors(passing.filters) 
+
+derep.nano <- dada2::derepFastq(passing.filters)
+
+dada.nano <- dada2::dada(derep.nano, errors.nano, multithread = T)
+
+seqtabF <- makeSequenceTable(dada.nano)
+dim(seqtabF)
+table(nchar(getSequences(seqtabF)))
+
+```
