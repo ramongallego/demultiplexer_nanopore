@@ -3,13 +3,17 @@
 
 # Usage: bash decona.sh <path.to.out.folder>
 
-OUTPUT_DIRECTORY="${1}"
+OUTPUT="${1}"
+
+# Grab the parameters file so you have the clustering threshold
+
+source "${OUTPUT}"/banzai_params.sh
 
 # All files of interest should be in noprimers/file/plate/*.fastq
-cd "${OUTPUT_DIRECTORY}"
+cd "${OUTPUT}"
 
-for folder in noprimers/*/*; do
+for folder in noprimers/*; do
   cd ${folder}
-  decona -c 0.85 -n 10 -M
-  cd "${OUTPUT_DIRECTORY}"
+  decona -c "${CLUSTER_SIM}" -n 5 -M
+  cd "${OUTPUT}"
 done

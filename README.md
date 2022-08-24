@@ -10,7 +10,7 @@ The data I had was generated using 9.4 flowcells, and although I used `sup`basec
 
 ## Dependencies
 
-This script has been tested in Pop OS 18. It should work in Mac as well, but I think different `sed` versions will return different results.
+This script has been tested in Pop OS 21. It should work in Mac as well, but I think different `sed` versions will return different results.
 
 The script relies mostly on cutadapt (<https://cutadapt.readthedocs.io/en/stable/index.html>).
 
