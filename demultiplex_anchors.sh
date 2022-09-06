@@ -339,7 +339,7 @@ awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
 
 
     cutadapt -g file:"${BARCODES_DIR}"/barcodes_P5_anchored.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
-   --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.3 "${READ1}".anchored.fastq --cores="${N_CORES}"
+   --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".anchored.fastq --cores="${N_CORES}"
 
 	# cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
 	#  --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".new.fastq
