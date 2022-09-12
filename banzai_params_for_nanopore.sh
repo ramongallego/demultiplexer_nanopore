@@ -98,8 +98,10 @@ MAX_LENGTH="1900"
 
 CLUSTER_SIM="0.8"
 
-
-
+## ADDED on 20220909
+## DO you want the final fastqs to also be split by locus (yes) or do you want just
+## one fastq per index (Plate_well)
+DEMULT_BY_PRIMER="YES"
 
 
 ################################################################################
