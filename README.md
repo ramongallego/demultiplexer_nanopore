@@ -6,13 +6,21 @@ Here I have modified a Illumina pipeline for custom indices (github.com/ramongal
 
 The idea is that you have a `metadata` file with the information we need: sample name, index at the 5' end (which I named i5 because it is hard to move from Illumina), index at the 3' end and so on. Then you need a parameters file, in which you point at the right files, and establish some settings: minimum and maximum fragment length, number of cores (checked in Linux, let me know if it doesn´t work in your OS) and so on.
 
-The data I had was generated using 9.4 flowcells, and although I used `sup`basecalling, there are still some errors that can lead to low efficiency of demultiplexing. So I used *anchors*: sequences immediately preceding the indices so we can tell `cutadapt` where exactly they are. Once I get my hands on some kit14 and last generation flowcells, this probably won´t be neccessary.
+The data I had was generated using 9.4 flowcells, and although I used `sup`basecalling, there are still some errors that can lead to low efficiency of demultiplexing. So I used *anchors*: sequences immediately precedingES
+ the indices so we can tell `cutadapt` where exactly they are. Once I get my hands on some kit14 and last generation flowcells, this probably won´t be neccessary.
 
 ## Dependencies
 
 This script has been tested in Pop OS 21. It should work in Mac as well, but I think different `sed` versions will return different results.
 
 The script relies mostly on cutadapt (<https://cutadapt.readthedocs.io/en/stable/index.html>).
+
+## Usage
+
+Run the script from the command line or Window Subsystem for Linux. Before running it, the user needs to prepare the metadata file with the appropiate columns with the needed information. There are also a few elements to update in the parameters file, particularly the location of the fastq and metadata files, the length expected of the PCR product, and whether the products should be split by loci. 
+Once ready, the usage is
+
+```bash <path/to/demultiplex_universal.sh> <path/to/params.file>```
 
 ## Clustering
 
