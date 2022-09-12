@@ -348,10 +348,6 @@ awk -F','  -v FWD=$COLNUM_PRIMER1 -v LOCI=$COLNUM_LOCUS \
     cutadapt -g file:"${BARCODES_DIR}"/barcodes_P5.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_adap.fastq \
    --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.1 "${READ1}".tentative_i5.fastq --cores="${N_CORES}"
 
-	# cutadapt -g file:"${OUTPUT_DIR}"/barcodes_P5.fasta -o "${DEMULT_DIR}"/"${FILE1[i]}"/{name}_round1.fastq \
-	#  --quiet --untrimmed-output "${OUTPUT_DIR}"/${BASE1}_nop5.fastq -e 0.2 "${READ1}".new.fastq
-
-
 
 
 		n_files=("${DEMULT_DIR}"/"${FILE1[i]}"/*_adap.fastq)
@@ -392,19 +388,12 @@ awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
 	 	 'NR>1 { if ($COLNAME == VALUE) {printf ">Well_%s\n%s\n", $COLID2, $COLSEQ2} }'  "${SEQUENCING_METADATA}" > "${BARCODES_DIR}"/barcodes.p7.for.rc.fasta
 
 
-#awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
-#-v COLSEQ2="${COLNUM_ID2_RCSEQ}" -v COLID2="${COLNUM_ID2_WELL}" \
-#'NR>1 { if ($COLNAME == VALUE) {printf ">Well_%s\n%s\n", $COLID2, $COLSEQ2} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.fasta
 
-#awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
-#-v COLSEQ2="${COLNUM_ID2_RCSEQ}" -v COLID2="${COLNUM_ID2_WELL}" \
-#'NR>1 { if ($COLNAME == VALUE) {printf ">Well_%s\n%s$\n", $COLID2, $COLSEQ2} }'  "${SEQUENCING_METADATA}" > "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"/barcodes.p7.strict.fasta
-
-
-## How does it work if we rc the files prior to finding the p7
-## TODO: CAAGCAGAAGACGGCATACGAGAT can works as a way of anchoring the p7
+## reverse complement the whole thing so we make sure the reverse primer was the first thing we find
 	seqkit seq -r -p -t DNA "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_round1.fastq \
 	 -o "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_round1.rc.fastq --quiet
+
+## Again, we run cutadapt twice, once to find the amplicon, the other one to fnd the adapters
 
 	cutadapt -g "file:"${BARCODES_DIR}"/revprimer.fasta;min_overlap=5" \
          -o  "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}".anchored.rc.fastq \
@@ -415,7 +404,7 @@ awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
 				          -o  "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}".adapters.fastq \
 				          "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_round1.rc.fastq \
 				 				   --discard-untrimmed  -e 0.2 --cores="${N_CORES}" >> "${LOGFILE}"
-				 # Change adaptor anchoring -e value
+
 
 
 
