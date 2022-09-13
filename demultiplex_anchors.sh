@@ -456,6 +456,7 @@ n_files2=("${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_*_round2_rc.fastq)
 done # End of loop across all plates within a file
 ## AN extra thing to do is to create a csv file with all the sequence headers that ended on each sample - so we can run decona with all samples and
 ## demultiplex again
+
 for file in "${FINAL_DIR}"/"${FILE1[i]}"/*.fastq; do
 	 awk 'BEGIN {OFS=","} NR %4==1 {printf "%s,%s\n", FILENAME, $1}' $file >> "${OUTPUT_DIR}"/hash.list.csv
   done

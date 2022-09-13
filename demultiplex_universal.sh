@@ -142,7 +142,7 @@ echo "Checking that all columns in metadata are there"
 
 for column in "${all_columns[@]}" ; do
 
- if [ "${!column}"  > 0 ]; then
+ if [ "${!column}"  -gt  0 ]; then
 	 echo "looking good, ${column}"
  else
   echo "Something went wrong with column name ${column}"
@@ -410,7 +410,7 @@ awk -F',' -v COLNAME="${COLNUM_ID1}" -v VALUE="${BASE_OUTPUT}" \
 
 	cutadapt -g "file:"${BARCODES_DIR}"/barcodes.p7.for.rc.fasta;min_overlap=5" \
 				 -o "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_{name}_round2_rc.fastq --no-indels \
-				 --quiet --untrimmed-output "${BASE_OUTPUT}"_nop7.fastq -e 0.1 "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}".adapters.fastq --cores="${N_CORES}" >> "${LOGFILE}"
+				 --quiet --untrimmed-output "${DEMULT_DIR}"/"${BASE_OUTPUT}"_nop7.fastq -e 0.1 "${DEMULT_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}".adapters.fastq --cores="${N_CORES}" >> "${LOGFILE}"
 
 
 
@@ -471,8 +471,12 @@ fi
 
 	nseq_demult=$(cat ${file2} | wc -l)
 
-	nseq_noprimer=$(cat "${FINAL_DIR}"/"${FILE1[i]}"/"${FINAL_BASENAME}".fastq | wc -l )
+if [[ "${DEMULT_BY_PRIMER}" == "YES" ]]; then
+nseq_noprimer=$(cat "${FINAL_DIR}"/*/"${FILE1[i]}"_"${FINAL_BASENAME}"*.fastq | wc -l )
+else
+		nseq_noprimer=$(cat "${FINAL_DIR}"/"${FILE1[i]}"/"${BASE_OUTPUT}"_Well_"${BASE_P7}"_*.fastq | wc -l )
 
+fi
 	 printf "%s,%s,%s,%s,%s\n" \
 	 "${BASE_OUTPUT}" "${pcr_basename}" \
 	 "${nseq_deplated}" "${nseq_demult}" "${nseq_noprimer}" >> "${OUTPUT_SUMMARY}"
@@ -487,14 +491,15 @@ fi
 done # End of loop across all plates within a file
 # AN extra thing to do is to create a csv file with all the sequence headers that ended on each sample - so we can run decona with all samples and
 # demultiplex again
-for file in "${FINAL_DIR}"/"${FILE1[i]}"/*.fastq; do
-	 awk 'BEGIN {OFS=","} NR %4==1 {printf "%s,%s\n", FILENAME, $1}' $file >> "${OUTPUT_DIR}"/hash.list.csv
 
-
-  done
 
 	done # End of loop across all initial fastq files
+	## AN extra thing to do is to create a csv file with all the sequence headers that ended on each sample - so we can run decona with all samples and
+## demultiplex again
 
+for file in "${FINAL_DIR}"/*/*.fastq; do
+	 awk 'BEGIN {OFS=","} NR %4==1 {printf "%s,%s\n", FILENAME, $1}' $file >> "${OUTPUT_DIR}"/hash.list.csv
+  done
 
 if [[ "${HOARD}" != "YES" ]]; then
 	rm "${OUTPUT_DIR}"/*nop5.fastq

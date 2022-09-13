@@ -9,7 +9,7 @@
 PARENT_DIR="${MAIN_DIR}"/data_Dani
 
 # Where is the sequencing metadata file? (SEE FORMATTING GUIDELINES IN README!)
-SEQUENCING_METADATA="${PARENT_DIR}"/test.csv
+SEQUENCING_METADATA="${PARENT_DIR}"/metadata_Run003.csv
 
 
 
