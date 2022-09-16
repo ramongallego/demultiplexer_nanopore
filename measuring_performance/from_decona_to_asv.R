@@ -1,7 +1,20 @@
 # decona .clstr nfo
 
-input.file <- "~/Documents/test_demult/decona_all_together/all/cluster_representatives.clstr"
-input.seqs <- "~/Documents/test_demult/decona_all_together/all/cluster_representatives.fa"
+# Prepare this to work with all the decona outputs in a folder
+# Because all reads map to the hash.list, and that includes the loci, I thin we can pull 
+# this one 
+
+library(tidyverse)
+
+
+
+output.folder <- "C:/Users/RG.5015511/Documents/Projects/demultiplexer_nanopore/test_demult/demultiplexed_20220913_1438"
+
+input.file <- list.files(path = output.folder, pattern = "cluster_representatives.clstr", full.names = T, recursive = T )
+input.file <- input.file[1]
+input.seqs <- list.files(path = output.folder, pattern = "cluster_representatives.fa", full.names = T, recursive = T )
+input.seqs <- input.seqs[1]
+headers.list  <- file.path(output.folder,"hash.list.csv")
 read_table(input.file, col_names = c("Cluster","length" ,"seq", NA,"per") )
 
 read.cdhit.clstr <- function(fname) {
@@ -19,21 +32,14 @@ read.cdhit.clstr <- function(fname) {
     mutate(similarity = as.numeric(similarity)) %>% 
     arrange(Cluster, Representative) %>% 
     fill(Representative) %>% 
-    # group_by(Cluster) %>%
-    # mutate(Representative = Seq.Name[which(Is.Representative)]) %>%
-    # separate_rows(Col2, sep = ",") %>%
-    # separate(Col2, into = data.fields, sep = "/", fill = "left", convert = T) %>%
-    # mutate(Identity = sub("%", "", Identity) %>% as.numeric) %>%
-    # group_by(Seq.Name) %>%
-    # mutate(level.rank = paste0(".", 1:n() - 1), level.rank = ifelse(level.rank == ".0", "", level.rank)) %>%
-    # pivot_wider(names_from = level.rank, values_from = data.fields, names_sep = "") %>%
     ungroup
 }
+
 read.cdhit.clstr(input.file) -> clustered
 
-read_csv("~/Documents/test_demult/decona_all_together/hash.list.csv") %>% 
-  mutate(seqid = str_remove(seqid, "^@")) %>%
-  left_join(clustered) -> joindf
+read_csv(headers.list, col_names = c("file", "seqid")) %>% 
+  mutate(seqid = str_remove(seqid, "^@")) %>% 
+  inner_join(clustered) -> joindf
 
 joindf %>% 
   group_by(file, Cluster, Representative) %>% 
@@ -44,17 +50,22 @@ joindf %>%
 Clusters <- tibble (seqs = insect::readFASTA(input.seqs, bin = F),
                     Representative= names(insect::readFASTA(input.seqs))) %>% 
   group_by(seqs) %>% 
-  mutate(Hash = map_chr(seqs, sha1,serialize = F))
+  mutate(Hash = map_chr(seqs,digest::sha1,serialize = F))
 
 ASV_table %>% 
   left_join(Clusters ) %>% 
   select(file, Hash, nReads) -> ASV_table
 
+ASV_table %>% 
+  mutate(file =basename(file))-> ASV_table
+
 seqinr::write.fasta(sequences = as.list(Clusters$seqs),
                     names     = as.list(Clusters$Hash),
-                    file.out = "~/Documents/test_demult/decona_all_together/hash_key.fasta")
+                    file.out = file.path(output.folder, "hash_key.fasta"))
 
-write_csv(ASV_table, "~/Documents/test_demult/decona_all_together/ASV_table.csv")
+write_csv(ASV_table, file.path(output.folder, "ASV_table.csv"))
 Clusters %>% 
   select(Hash, seqs) %>% 
-  write_csv("~/Documents/test_demult/decona_all_together/hash_key.csv")
+  write_csv(file.path(output.folder,"hash_key.csv"))
+
+
