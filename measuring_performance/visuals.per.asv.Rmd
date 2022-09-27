@@ -1,0 +1,86 @@
+---
+title: "exploring"
+output: html_notebook
+---
+
+Get the ASV table after we ran demultiplexer + decona global
+
+```{r}
+library(tidyverse)
+```
+
+Get the files 
+
+```{r}
+ASV_table <- read_csv("~/Documents/test_demult/demultiplexed_20220916_1237/ASV_table.csv") %>% 
+  separate (file, into = c("file", "Plate", NA, "Well", NA, "locus", NA), sep = "_")
+
+Hash_key <- read_csv("~/Documents/test_demult/demultiplexed_20220916_1237/hash_key.csv")
+```
+
+How many
+
+```{r}
+ASV_table %>% 
+  summarise (n = n_distinct(Hash),
+             nR = sum(nReads))
+```
+
+
+Are ASVs unique or shared
+
+```{r}
+ASV_table %>% 
+  group_by(Hash) %>% 
+  summarise (n = n(),
+             nR = sum(nReads)) %>% 
+  ggplot(aes(x = n, y = nR)) +
+  geom_point()
+```
+
+Wait what
+
+There is an ASV that appears on mostly every sample and gets half of the reads?
+
+```{r}
+ASV_table %>% 
+  group_by(Hash) %>% 
+  summarise (n = n(),
+             nR = sum(nReads)) %>% 
+  arrange(desc(nR))
+```
+```{r}
+ASV_table %>% 
+  arrange(desc(nReads)) %>% 
+  slice(2) %>% select(Hash) %>% 
+  inner_join(Hash_key) %>% 
+   pull(seqs) %>% 
+  str_split("") %>% 
+  
+```
+
+A function that plots the distribution of a ASV in a sequencing run
+```{r}
+plot.one <- function(ASV, ASV_table){
+  
+  ASV_table %>% 
+    group_by(Plate,  Well) %>%
+    mutate(Well.tot = sum(nReads)) %>% 
+    
+    
+    group_by(Well, Hash) %>% 
+    mutate(Pro.nreads = (100 *nReads)/Well.tot) %>% 
+    separate(Well, into = c("Row", "Column"), sep = 1, convert = T) %>% 
+    filter (Hash == ASV) %>% 
+    
+    ggplot(aes(x = Column,
+               y = Row,
+               fill = Pro.nreads)) +
+    facet_wrap(~Plate) +
+    scale_x_discrete()+
+    geom_raster()
+  
+}
+plot.one("a08c6139ebf94cf14a2631dc803520fb05517694", ASV_table)
+```
+

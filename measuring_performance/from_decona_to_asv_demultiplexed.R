@@ -1,4 +1,4 @@
-# Using Decona globally (with all sequences in a run)
+# Using Decona on each well (with all sequences in a run)
 # Run this pointing to two folders:
 # the output folder from running the demultiplexer
 # decona's output folder
@@ -45,10 +45,11 @@ joindf %>%
 
 ## Now bring the consensus seqs
 
-consensus.path <- file.path(decona.folder, "multi-seq", "all_medaka_fastas.fasta")
+consensus.path <- list.files(decona.folder, pattern = "all_medaka_fastas.fasta", recursive = T, full.names = T)
 
 tibble (seqs = insect::readFASTA(consensus.path, bin = F),
-        cluster= names(insect::readFASTA(consensus.path))) %>% 
+        cluster= names(insect::readFASTA(consensus.path)),
+        file = dirname(consensus.path)) %>% 
   mutate(cluster = str_remove_all(cluster, "consensus_medaka-|.fasta")) %>% 
   group_by(seqs) %>% 
   mutate(Hash = map_chr(seqs,digest::sha1,serialize = F)) %>% 

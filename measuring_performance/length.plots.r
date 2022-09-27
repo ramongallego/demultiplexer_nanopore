@@ -1,11 +1,10 @@
 # load original lengths
 
-fastq.folder <- "/data/minknow/data/Run003_20220520_longAmplicons/no_sample/20220520_1400_MN40189_FAT20945_29cfc02a/fast5_pass/fastq_sup/pass/"
 
-output_folder <- "~/Documents/test_demult/demultiplexed_20220623_1055/"
+output_folder <- "~/Documents/test_demult/demultiplexed_20220907_1513/"
 
-original.lengths <- read_table(file.path(fastq.folder, "seq.lengths.init"),
-                               col_names = c("seq","length.init"))
+# original.lengths <- read_table(file.path(fastq.folder, "seq.lengths.init"),
+                               # col_names = c("seq","length.init"))
 
 # Load legnths after redirecting fwd
 
@@ -90,11 +89,73 @@ ready.for.fig1 %>%
 
 
 # Bring in the lengths after each process
+output_folder <- "~/Documents/test_demult/demultiplexed_20220909_0947/"
 
-demult.lengths.by.plate <- read_table(file.path(output_folder, "seq.lengths.demult.by.plate"), col_names = c("seq","length.plate", "file")) %>% mutate(file = str_remove(file, "_round1.fastq"))
+demult.lengths.by.plate <- read_table(file.path(output_folder, "seq.lengths.demult.by.plate.txt"), col_names = c("seq","length.plate", "file")) %>% 
+  mutate(file = str_remove(file, "_round1.fastq"),
+         file = basename(file))
+
+demult.lengths.adapters <- read_table(file.path(output_folder, "seq.lengths.adapters.txt"), col_names = c("seq","length.plate", "file")) %>% 
+  mutate(file = str_remove(file, "_adap.fastq"),
+         file = basename(file))
 
 demult.lengths.by.well <- read_table(file.path(output_folder, "seq.lengths.demult.by.well"), col_names = c("seq","length.well", "file"))%>% mutate(file = str_remove(basename(file), ".fastq"))
 
 demult.lengths.primer.removed <- read_table(file.path(output_folder, "seq.lengths.demult.primer.removed"), col_names = c("seq","length.amplicon", "file")) %>% 
   mutate(file = basename(file),
          file = str_remove(file, "_16S_long.fastq")) 
+
+demult.lengths.by.plate %>% 
+  mutate(version = "Universal") -> demult.lengths.by.plate.universal
+
+demult.lengths.by.plate <- read_table(file.path(output_folder, "seq.lengths.demult.by.plate.txt"), col_names = c("seq","length.plate", "file")) %>% 
+  mutate(file = str_remove(file, "_round1.fastq"),
+         file = basename(file)) %>% 
+  mutate(version = "Anchored")
+
+bind_rows(demult.lengths.by.plate.universal, demult.lengths.by.plate) 
+
+demult.lengths.by.plate.universal %>%   
+  ggplot ( aes(y = length.plate, x = file, fill = file)) +
+  geom_violindot(fill_dots = "black") +
+  theme_modern()+
+  scale_fill_material_d() +
+  facet_wrap(~version, nrow = 2) +
+  guides(fill = "none")
+
+bind_rows(demult.lengths.by.plate.universal, demult.lengths.by.plate) %>% 
+ggplot( aes(x = file, fill= length.plate>1000)) +
+  geom_bar(position = "stack")+
+  facet_wrap(~version, nrow = 2)
+
+demult.adapters <- read_table(file.path(output_folder, "seq.adapters.txt"), col_names = c("seqID","seq", "length.plate", "file")) %>% 
+  mutate(file = str_remove(file, "_round1.fastq"),
+         file = basename(file))
+
+demult.adapters %>% 
+  group_by(seq) %>% 
+  tally(sort = T)
+
+demult.adapters %>% 
+  filter (seq == "TCTACACCTA")
+
+output_folder <- "~/Documents/test_demult/demultiplexed_20220909_1006/"
+after.pcr.primer <- read_table(file.path(output_folder, "seq.lengths.after.rev.primer.txt"), col_names = c("seq", "length.plate", "file")) %>% 
+  mutate(file = str_remove(file, ".anchored.rc.fastq"),
+         file = basename(file))
+after.pcr.primer %>% 
+  ggplot ( aes(y = length.plate, x = file, fill = file)) +
+  geom_violindot(fill_dots = "black") +
+  theme_modern()+
+  scale_fill_material_d() +
+  guides(fill = "none")
+
+final.length <- read_table(file.path(output_folder, "seq.lengths.demult.by.well.txt"), col_names = c("seq", "length.plate", "file")) %>% 
+  mutate(file = basename(file)) %>% 
+  separate(file, into = c("Plate", "Well"), sep = "_Well_")
+final.length %>% 
+  ggplot ( aes(y = length.plate, x = Plate, fill = Plate)) +
+  geom_violindot(fill_dots = "black") +
+  theme_modern()+
+  scale_fill_material_d() +
+  guides(fill = "none")
